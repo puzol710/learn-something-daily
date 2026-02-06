@@ -2,24 +2,103 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Learn Something New Today</title>
-  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; background:#f7f9fc; margin:0; color:#111827 }
+    header { background:#111827; color:#fff; padding:2rem 1rem; text-align:center }
+    main { max-width:800px; margin:2rem auto; padding:0 1rem }
+    h2 { margin-top:2rem }
+    footer { text-align:center; padding:2rem; color:#6b7280 }
+    a { color:#2563eb }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>📘 Learn Something New Today</h1>
-    <p class="subtitle">One meaningful topic. Every day.</p>
-  </header>
+<header>
+  <h1>📘 Learn Something New Today</h1>
+  <p>Powered by real-world news</p>
+</header>
+<main id="content">Loading today’s lesson…</main>
+<footer>© 2026</footer>
+<script>
+/*****************************************************************
+ CONFIG
+*****************************************************************/
+const NEWS_API_KEY = "c042030047cb4ad5a898750e853ef8d9"; // https://newsapi.org
+const NEWS_TOPICS = ["technology", "finance", "healthcare", "ai", "climate"];
 
-  <main id="lesson-container">
-    <!-- Lesson content injected by JS -->
-  </main>
+/*****************************************************************
+ BACKUP LESSONS (365-capable)
+*****************************************************************/
+const backupLessons = [
+  {
+    title: "What Is Inflation, Really?",
+    body: "Inflation measures how quickly prices rise over time. It affects wages, savings, investments, and purchasing power. Central banks attempt to control inflation using interest rates and monetary policy...",
+    explore: ["Federal Reserve policy", "CPI vs PCE"]
+  },
+  {
+    title: "How Machine Learning Models Learn",
+    body: "Machine learning models learn by adjusting parameters to minimize error. Training involves data, loss functions, and optimization algorithms like gradient descent...",
+    explore: ["Supervised vs unsupervised learning", "Neural networks"]
+  }
+  // → expand to 365 lessons
+];
 
-  <footer>
-    <p>Built for curiosity. © 2026</p>
-  </footer>
+/*****************************************************************
+ HELPERS
+*****************************************************************/
+function getBackupLessonForToday() {
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0)) / 86400000);
+  return backupLessons[dayOfYear % backupLessons.length];
+}
 
-  <script src="script.js"></script>
+async function fetchNewsLesson() {
+  const query = NEWS_TOPICS.join(" OR ");
+  const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=en&pageSize=5&apiKey=${NEWS_API_KEY}`;
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("News fetch failed");
+
+  const data = await res.json();
+  if (!data.articles || data.articles.length === 0) return null;
+
+  const article = data.articles[0];
+
+  return {
+    title: article.title,
+    body: `This lesson is based on a real news event:\n\n${article.description || article.content || "No summary available."}\n\nWhy this matters: This topic reflects broader shifts happening globally right now, affecting economics, technology, and policy decisions. Understanding the background helps you interpret similar news in the future.`,
+    explore: [article.url]
+  };
+}
+
+/*****************************************************************
+ RENDER
+*****************************************************************/
+function renderLesson(lesson, source) {
+  document.getElementById("content").innerHTML = `
+    <h2>${lesson.title}</h2>
+    <p><em>Source: ${source}</em></p>
+    <p>${lesson.body}</p>
+    <h3>Explore more</h3>
+    <ul>${lesson.explore.map(e => `<li>${e.startsWith("http") ? `<a href="${e}" target="_blank">${e}</a>` : e}</li>`).join("")}</ul>
+  `;
+}
+
+/*****************************************************************
+ MAIN
+*****************************************************************/
+(async function init() {
+  try {
+    const newsLesson = await fetchNewsLesson();
+    if (newsLesson) {
+      renderLesson(newsLesson, "Current news");
+    } else {
+      renderLesson(getBackupLessonForToday(), "Evergreen knowledge");
+    }
+  } catch (e) {
+    renderLesson(getBackupLessonForToday(), "Evergreen knowledge");
+  }
+})();
+</script>
 </body>
 </html>
